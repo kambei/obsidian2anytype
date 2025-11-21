@@ -24,6 +24,8 @@ const outputPath = args[1] || DEFAULT_OUTPUT_PATH;
 // Track Sets for hierarchy
 const sets = new Map(); // path -> set info
 
+// No longer using allUniqueTags - tags are added directly as colorized tag property
+
 /**
  * Convert Obsidian wiki-style links [[Note Name]] to markdown links
  * Also handles aliases: [[Note Name|Display Text]]
@@ -1042,6 +1044,10 @@ function addPageMetadata(content, setInfo, filePath = null) {
   // Extract tags from content
   const tags = extractTags(content);
   
+  // No longer tracking unique tags for separate tag files
+  // Tags are now added directly as colorized tag property
+  // Tags are now added directly as colorized tag property
+  
   // Debug: log tags found (only for files with tags)
   if (tags.length > 0 && filePath) {
     console.log(`    🏷️  Tags found in ${path.basename(filePath)}: ${tags.join(', ')}`);
@@ -1086,13 +1092,20 @@ function addPageMetadata(content, setInfo, filePath = null) {
       frontmatterObj.set = setInfo.rootSet;
     }
     
-    // Add tags if any found - format as objects
+    // Add section property for pages with tags - helps Anytype organize and display tags
+    if (tags.length > 0) {
+      // Section can be used to group pages with tags
+      frontmatterObj.section = tags[0]; // Use first tag as section, or could use a default value
+    }
+    
+    // Add tags if any found - format as tags array for Anytype
     if (tags.length > 0) {
       // If tags already exist in frontmatter, merge them
       let existingTags = [];
       if (frontmatterObj.tags) {
+        // Handle existing tags format
         if (Array.isArray(frontmatterObj.tags)) {
-          existingTags = frontmatterObj.tags;
+          existingTags = frontmatterObj.tags.map(t => typeof t === 'string' ? t : (t.name || t.id || String(t)));
         } else if (typeof frontmatterObj.tags === 'object') {
           existingTags = Object.keys(frontmatterObj.tags);
         } else {
@@ -1101,14 +1114,17 @@ function addPageMetadata(content, setInfo, filePath = null) {
       }
       const allTags = [...new Set([...existingTags, ...tags])].sort();
       
-      // Format tags as objects for Anytype - tags need to be objects with id and name
-      // Each tag should be an object with id and name properties for Anytype to recognize them
-      const tagsAsObjects = allTags.map(tag => {
-        // Generate a simple ID from the tag name (consistent hash)
-        const tagId = tag.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        return { id: tagId, name: tag };
-      });
-      frontmatterObj.tags = tagsAsObjects;
+      // Format tags as simple array of tag names for Anytype
+      // Anytype will recognize this and display them as tags
+      frontmatterObj.tags = allTags;
+      
+      // Remove old tag property if it exists
+      delete frontmatterObj.tag;
+      
+      // Debug: log all tags being added to this page
+      if (filePath && allTags.length > 0) {
+        console.log(`    🏷️  Adding ${allTags.length} tag(s) to ${path.basename(filePath)}: ${allTags.join(', ')}`);
+      }
     }
     
     // Rebuild frontmatter
@@ -1116,87 +1132,161 @@ function addPageMetadata(content, setInfo, filePath = null) {
       Object.entries(frontmatterObj)
         .map(([key, value]) => {
           if (key === 'tags' && Array.isArray(value)) {
-            // Format tags as YAML array of objects for Anytype (to display as badges)
+            // Format tags as simple YAML array of strings for Anytype
             if (value.length === 0) {
               return `${key}: []`;
             }
-            // Format tags as objects with id and name properties for Anytype badge display
-            // Anytype automatically assigns colors to tags based on their names
-            const tagEntries = value.map(tag => {
-              if (typeof tag === 'object' && tag.name) {
-                // Tag is already an object with name property
-                const tagId = tag.id || tag.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                return `  - id: "${tagId}"\n    name: "${tag.name}"`;
-              } else if (typeof tag === 'string') {
-                // Tag is a string, format as object with id and name properties
-                const tagId = tag.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                return `  - id: "${tagId}"\n    name: "${tag}"`;
-              } else {
-                // Fallback: convert to string
-                const tagStr = String(tag);
-                const tagId = tagStr.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                return `  - id: "${tagId}"\n    name: "${tagStr}"`;
-              }
-            }).join('\n');
-            return `${key}:\n${tagEntries}`;
+            // Format as simple array of tag names
+            return `${key}:\n${value.map(tag => `  - "${typeof tag === 'string' ? tag : (tag.name || tag.id || String(tag))}"`).join('\n')}`;
           }
           return `${key}: ${typeof value === 'string' ? `"${value}"` : value}`;
         })
         .join('\n') + 
       '\n---\n';
     
-    return content.replace(frontmatterRegex, newFrontmatter);
+    // Add tags section under title if tags exist
+    let contentWithTags = content.replace(frontmatterRegex, newFrontmatter);
+    if (tags.length > 0) {
+      contentWithTags = addTagsSectionToContent(contentWithTags, tags);
+    }
+    return contentWithTags;
   } else {
     // Add new frontmatter
     const frontmatter = {
       type: pageType,
       ...(setInfo && setInfo.rootSet && { set: setInfo.rootSet })
     };
+    
+    // Add section property for pages with tags - helps Anytype organize and display tags
     if (tags.length > 0) {
-      // Format tags as objects for Anytype - tags need to be objects with id and name
-      // Each tag should be an object with id and name properties for Anytype to recognize them
-      const tagsAsObjects = tags.map(tag => {
-        // Generate a simple ID from the tag name (consistent hash)
-        const tagId = tag.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        return { id: tagId, name: tag };
-      });
-      frontmatter.tags = tagsAsObjects;
+      // Section can be used to group pages with tags
+      frontmatter.section = tags[0]; // Use first tag as section, or could use a default value
+    }
+    
+    if (tags.length > 0) {
+      // Format tags as simple array of tag names for Anytype
+      // Anytype will recognize this and display them as tags
+      frontmatter.tags = tags;
     }
     
     const frontmatterStr = '---\n' + 
       Object.entries(frontmatter)
         .map(([key, value]) => {
           if (key === 'tags' && Array.isArray(value)) {
-            // Format tags as YAML array of objects for Anytype badge display
+            // Format tags as YAML array
             if (value.length === 0) {
               return `${key}: []`;
             }
-            // Format tags as objects with id and name properties for Anytype
-            // Anytype automatically assigns colors to tags based on their names
-            const tagEntries = value.map(tag => {
-              if (typeof tag === 'object' && tag.name) {
-                // Tag is already an object with name property
-                const tagId = tag.id || tag.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                return `  - id: "${tagId}"\n    name: "${tag.name}"`;
-              } else if (typeof tag === 'string') {
-                // Tag is a string, format as object with id and name properties
-                const tagId = tag.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                return `  - id: "${tagId}"\n    name: "${tag}"`;
-              } else {
-                // Fallback: convert to string
-                const tagStr = String(tag);
-                const tagId = tagStr.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                return `  - id: "${tagId}"\n    name: "${tagStr}"`;
-              }
-            }).join('\n');
-            return `${key}:\n${tagEntries}`;
+            // Format as simple array of strings
+            return `${key}:\n${value.map(tag => `  - "${tag}"`).join('\n')}`;
           }
           return `${key}: ${typeof value === 'string' ? `"${value}"` : value}`;
         })
         .join('\n') + 
       '\n---\n\n';
     
-    return frontmatterStr + content;
+    // Add tags section under title if tags exist
+    let contentWithTags = frontmatterStr + content;
+    if (tags.length > 0) {
+      contentWithTags = addTagsSectionToContent(contentWithTags, tags);
+    }
+    return contentWithTags;
+  }
+}
+
+/**
+ * Generate a color for a tag based on its name (consistent hash)
+ * @param {string} tagName - Tag name
+ * @returns {string} Hex color code
+ */
+function getTagColor(tagName) {
+  // Generate a consistent color based on tag name hash
+  let hash = 0;
+  for (let i = 0; i < tagName.length; i++) {
+    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Generate a color with good saturation and brightness
+  const hue = Math.abs(hash) % 360;
+  // Use HSL to RGB conversion for vibrant colors
+  const saturation = 65 + (Math.abs(hash) % 20); // 65-85% saturation
+  const lightness = 45 + (Math.abs(hash) % 15); // 45-60% lightness
+  
+  // Convert HSL to RGB
+  const h = hue / 360;
+  const s = saturation / 100;
+  const l = lightness / 100;
+  
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+  const m = l - c / 2;
+  
+  let r, g, b;
+  if (h < 1/6) {
+    r = c; g = x; b = 0;
+  } else if (h < 2/6) {
+    r = x; g = c; b = 0;
+  } else if (h < 3/6) {
+    r = 0; g = c; b = x;
+  } else if (h < 4/6) {
+    r = 0; g = x; b = c;
+  } else if (h < 5/6) {
+    r = x; g = 0; b = c;
+  } else {
+    r = c; g = 0; b = x;
+  }
+  
+  r = Math.round((r + m) * 255);
+  g = Math.round((g + m) * 255);
+  b = Math.round((b + m) * 255);
+  
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+/**
+ * Add a tags section under the title in markdown content with colorized tags
+ * This makes tags visible in the page content with colors
+ * @param {string} content - Markdown content with frontmatter
+ * @param {Array<string>} tags - Array of tag names
+ * @returns {string} Content with colorized tags section added
+ */
+function addTagsSectionToContent(content, tags) {
+  // Find the first heading (title) or start of content after frontmatter
+  const frontmatterRegex = /^---\s*\n[\s\S]*?\n---\s*\n/;
+  const hasFrontmatter = frontmatterRegex.test(content);
+  
+  let contentAfterFrontmatter = content;
+  if (hasFrontmatter) {
+    contentAfterFrontmatter = content.replace(frontmatterRegex, '');
+  }
+  
+  // Find the first heading (h1, h2, etc.)
+  const headingRegex = /^(#{1,6}\s+.+)$/m;
+  const headingMatch = contentAfterFrontmatter.match(headingRegex);
+  
+  // Create colorized tags section
+  const colorizedTags = tags.map(tag => {
+    const color = getTagColor(tag);
+    // Use HTML span with inline style for colorization
+    return `<span style="background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; display: inline-block; margin: 2px;">#${tag}</span>`;
+  }).join(' ');
+  
+  const tagsSection = '\n\n<div style="margin: 10px 0;">**Tags:** ' + colorizedTags + '</div>\n\n';
+  
+  if (headingMatch) {
+    // Insert tags section right after the first heading
+    const headingIndex = headingMatch.index + headingMatch[0].length;
+    const beforeHeading = contentAfterFrontmatter.substring(0, headingIndex);
+    const afterHeading = contentAfterFrontmatter.substring(headingIndex);
+    
+    return hasFrontmatter 
+      ? content.replace(frontmatterRegex, '$&') + beforeHeading + tagsSection + afterHeading
+      : beforeHeading + tagsSection + afterHeading;
+  } else {
+    // No heading found, add tags section at the beginning
+    return hasFrontmatter
+      ? content.replace(frontmatterRegex, '$&' + tagsSection)
+      : tagsSection + content;
   }
 }
 
@@ -1821,6 +1911,9 @@ function convertToAnytype() {
   } catch (err) {
     console.error(`Error processing attachment folders:`, err.message);
   }
+  
+  // No longer creating separate tag object files
+  // Tags are now added as a colorized tag property in page frontmatter
   
   // Finalize the archive
   zip.finalize();

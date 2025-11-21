@@ -9,8 +9,10 @@ A Node.js script that converts Obsidian notes (with links and files) to a zip fi
 - ✅ **Creates a single root Set (`vault.set.md`)** with hierarchical folder structure
 - ✅ **Pages in folders use `type: SetLeaf`** with root Set metadata
 - ✅ **Root-level pages use `type: Page`** (no set metadata)
-- ✅ Extracts and formats Obsidian tags as YAML arrays in frontmatter
+- ✅ Extracts Obsidian tags and adds them as a `tags` array in frontmatter for Anytype recognition
 - ✅ Highlights tags in markdown content (makes them bold for visibility)
+- ✅ Adds colorized tags section under page title with HTML-styled badges
+- ✅ Tags are stored as a simple YAML array (`tags: - "tag1" - "tag2"`) that Anytype recognizes
 - ✅ Preserves folder structure with sanitized paths (spaces → underscores)
 - ✅ Includes all attachments (images, PDFs, documents, audio, video, etc.)
 - ✅ Recursively searches for images in attachments folders and subfolders
@@ -89,16 +91,21 @@ npm run convert
    - All paths are sanitized (spaces → underscores) and use forward slashes
    - Supports images, PDFs, and other document types
 
-5. **Tag Extraction and Highlighting**:
+5. **Tag Extraction and Display**:
    - Extracts Obsidian tags (e.g., `#tag`, `#tag/subtag`) from markdown content
    - Recognizes tags at start of line, after whitespace, or standalone (not embedded in words)
    - **Highlights tags in content**: Converts `#tag` to `**#tag**` (bold) for better visibility
-   - Adds tags to frontmatter as YAML arrays for Anytype compatibility
-   - **Tags appear as colored badges** in Anytype page view (like "Base Readme", "FCL - Field Check Lombardia" in the interface)
+   - **Adds colorized tags section**: Creates a visible tags section under the page title with HTML-styled colorized badges
+   - Each tag gets a unique, consistent color based on its name (using hash function)
+   - Tags appear as colored badges with rounded corners, padding, and white text in the content section
+   - **Adds tags to frontmatter as `tags` array**: Stores all tags as a simple YAML array of strings for Anytype recognition
+   - Format: `tags: - "tag1" - "tag2"` - Anytype recognizes this format and displays tags properly
    - Skips tags inside code blocks and inline code (both for extraction and highlighting)
    - Merges with existing tags if present
    - Debug logging shows which tags are found in each file
-   - Tags appear both in content (highlighted as bold text) and as colored badge tags in Anytype (from frontmatter)
+   - Tags appear in two places:
+     - In content as bold text (`**#tag**`) and as colorized HTML badges in a section under the title
+     - In frontmatter as a `tags` array that Anytype recognizes and displays
 
 6. **File Inclusion**:
    - Includes all markdown files (`.md`, `.markdown`)
@@ -118,6 +125,7 @@ The script creates a zip file containing:
 - **Page files** (markdown files) with appropriate types:
   - `type: SetLeaf` for pages in folders (with `set: <rootFolderName>`)
   - `type: Page` for root-level pages (no set metadata)
+  - Each page with tags includes a `tags` array in frontmatter (e.g., `tags: - "tag1" - "tag2"`)
 - **All attachment files** (images, PDFs, documents, audio, video, etc.)
 - **Preserved folder structure** with sanitized paths (spaces → underscores)
 
@@ -167,7 +175,7 @@ You can then upload this zip file to Anytype, where root folders become Sets, su
   - Attachments folders (both relative to file and vault root)
   - Entire vault (as last resort)
 - **File Path Fixes**: Automatically removes incorrectly appended `.md` extensions from image and file paths (e.g., `image.png.md` → `image.png`)
-- **Tag Formatting**: Tags are extracted from markdown content using improved regex that recognizes tags in various contexts (start of line, after whitespace, standalone). Tags are highlighted in the content by making them bold (`#tag` → `**#tag**`). Tags are added to frontmatter as YAML arrays (formatted as `tags: - "tag"`) for Anytype compatibility, which displays them as colored badge tags in the page view (similar to "Base Readme" or "FCL - Field Check Lombardia" badges). The script includes debug logging to show which tags are found in each file. Tags appear both visually in the content (as bold text) and as colored badge tags in Anytype (from frontmatter).
+- **Tag Formatting**: Tags are extracted from markdown content using improved regex that recognizes tags in various contexts (start of line, after whitespace, standalone). Tags are highlighted in the content by making them bold (`#tag` → `**#tag**`). Tags are added to frontmatter as a simple YAML array (`tags: - "tag1" - "tag2"`) that Anytype recognizes and displays properly. A colorized tags section is automatically added under the page title using HTML spans with inline styles - each tag gets a unique, consistent color based on its name. The script includes debug logging to show which tags are found in each file. Tags appear in two ways: as bold text in content and as colorized HTML badges in a section under the title (for visual display), and in frontmatter as a `tags` array that Anytype recognizes.
 - **Link Paths**: All link paths use forward slashes and are relative to vault root
 - **Broken Links**: Broken links (to non-existent notes) are still converted but may not work in Anytype
 - **Obsidian Features**: Obsidian-specific features like frontmatter and plugins are preserved as-is in the markdown
