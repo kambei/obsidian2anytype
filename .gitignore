@@ -1,0 +1,10 @@
+node_modules/
+*.zip
+.DS_Store
+.vscode/
+.idea/
+
+WORK
+MEMENTO
+
+package-lock.json

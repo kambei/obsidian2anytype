@@ -1,0 +1,22 @@
+{
+  "name": "obsidian2anytype",
+  "version": "1.0.0",
+  "description": "Convert Obsidian notes to Anytype-compatible zip file",
+  "main": "to_anytype.js",
+  "scripts": {
+    "convert": "node to_anytype.js",
+    "start": "node to_anytype.js"
+  },
+  "keywords": [
+    "obsidian",
+    "anytype",
+    "markdown",
+    "converter"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "archiver": "^6.0.1"
+  }
+}
+
