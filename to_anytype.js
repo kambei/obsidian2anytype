@@ -1107,12 +1107,15 @@ function addPageMetadata(content, setInfo, filePath = null) {
     }
     
     // Rebuild frontmatter
-    const newFrontmatter = '---\n' + 
+    const newFrontmatter = '---\n' +
       Object.entries(frontmatterObj)
         .map(([key, value]) => {
-          if (key === 'tags' && typeof value === 'object' && !Array.isArray(value)) {
-            // Format tags as YAML object
-            const tagEntries = Object.entries(value).map(([k, v]) => `  ${k}: "${v}"`).join('\n');
+          if (key === 'tags' && Array.isArray(value)) {
+            // Format tags as YAML array for Anytype (to display as badges)
+            if (value.length === 0) {
+              return `${key}: []`;
+            }
+            const tagEntries = value.map(tag => `  - "${tag}"`).join('\n');
             return `${key}:\n${tagEntries}`;
           }
           return `${key}: ${typeof value === 'string' ? `"${value}"` : value}`;

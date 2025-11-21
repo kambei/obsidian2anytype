@@ -94,10 +94,11 @@ npm run convert
    - Recognizes tags at start of line, after whitespace, or standalone (not embedded in words)
    - **Highlights tags in content**: Converts `#tag` to `**#tag**` (bold) for better visibility
    - Adds tags to frontmatter as YAML arrays for Anytype compatibility
+   - **Tags appear as colored badges** in Anytype page view (like "Base Readme", "FCL - Field Check Lombardia" in the interface)
    - Skips tags inside code blocks and inline code (both for extraction and highlighting)
    - Merges with existing tags if present
    - Debug logging shows which tags are found in each file
-   - Tags appear both in content (highlighted) and in frontmatter (as tag objects)
+   - Tags appear both in content (highlighted as bold text) and as colored badge tags in Anytype (from frontmatter)
 
 6. **File Inclusion**:
    - Includes all markdown files (`.md`, `.markdown`)
@@ -166,7 +167,7 @@ You can then upload this zip file to Anytype, where root folders become Sets, su
   - Attachments folders (both relative to file and vault root)
   - Entire vault (as last resort)
 - **File Path Fixes**: Automatically removes incorrectly appended `.md` extensions from image and file paths (e.g., `image.png.md` → `image.png`)
-- **Tag Formatting**: Tags are extracted from markdown content using improved regex that recognizes tags in various contexts (start of line, after whitespace, standalone). Tags are highlighted in the content by making them bold (`#tag` → `**#tag**`). Tags are added to frontmatter as YAML arrays for Anytype compatibility. The script includes debug logging to show which tags are found in each file. Tags appear both visually in the content (as bold text) and as tag objects in Anytype (from frontmatter).
+- **Tag Formatting**: Tags are extracted from markdown content using improved regex that recognizes tags in various contexts (start of line, after whitespace, standalone). Tags are highlighted in the content by making them bold (`#tag` → `**#tag**`). Tags are added to frontmatter as YAML arrays (formatted as `tags: - "tag"`) for Anytype compatibility, which displays them as colored badge tags in the page view (similar to "Base Readme" or "FCL - Field Check Lombardia" badges). The script includes debug logging to show which tags are found in each file. Tags appear both visually in the content (as bold text) and as colored badge tags in Anytype (from frontmatter).
 - **Link Paths**: All link paths use forward slashes and are relative to vault root
 - **Broken Links**: Broken links (to non-existent notes) are still converted but may not work in Anytype
 - **Obsidian Features**: Obsidian-specific features like frontmatter and plugins are preserved as-is in the markdown
