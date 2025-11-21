@@ -880,6 +880,103 @@ function isDirectlyInRootFolder(filePath) {
 }
 
 /**
+ * Highlight tags in markdown content by making them bold
+ * Converts #tag to **#tag** for better visibility
+ * @param {string} content - Markdown content
+ * @returns {string} Content with highlighted tags
+ */
+function highlightTags(content) {
+  // Match Obsidian tags: #tag or #tag/subtag
+  // Tags must be:
+  // - At start of line, or after whitespace/punctuation (not part of a word)
+  // - Followed by whitespace, punctuation, or end of line (not part of a word)
+  // Tags can contain: alphanumeric, underscores, hyphens, and slashes
+  const tagRegex = /(?:^|[\s\W])(#([a-zA-Z0-9_\-/]+))(?=[\s\W]|$)/g;
+  
+  // Split content by code blocks to avoid highlighting tags in code
+  const codeBlockRegex = /```[\s\S]*?```|`[^`]+`/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  
+  // Extract non-code parts
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({
+        text: content.substring(lastIndex, match.index),
+        start: lastIndex,
+        end: match.index
+      });
+    }
+    parts.push({
+      text: match[0],
+      start: match.index,
+      end: match.index + match[0].length,
+      isCode: true
+    });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < content.length) {
+    parts.push({
+      text: content.substring(lastIndex),
+      start: lastIndex,
+      end: content.length
+    });
+  }
+  
+  // If no code blocks found, use entire content
+  if (parts.length === 0) {
+    parts.push({
+      text: content,
+      start: 0,
+      end: content.length
+    });
+  }
+  
+  // Process each part
+  const processedParts = parts.map(part => {
+    if (part.isCode) {
+      // Don't modify code blocks
+      return part.text;
+    }
+    
+    // Highlight tags in non-code parts
+    let processedText = part.text;
+    // Reset regex lastIndex
+    tagRegex.lastIndex = 0;
+    const replacements = [];
+    
+    // Find all tag matches
+    let tagMatch;
+    while ((tagMatch = tagRegex.exec(part.text)) !== null) {
+      const fullMatch = tagMatch[0]; // Includes preceding char (space/punctuation)
+      const tagWithHash = tagMatch[1]; // The #tag part
+      const tagName = tagMatch[2]; // Just the tag name
+      
+      // Only highlight if not already bold
+      if (!part.text.substring(Math.max(0, tagMatch.index - 2), tagMatch.index + tagMatch[0].length + 2).includes('**')) {
+        replacements.push({
+          index: tagMatch.index,
+          length: tagMatch[0].length,
+          replacement: fullMatch.replace(tagWithHash, `**${tagWithHash}**`)
+        });
+      }
+    }
+    
+    // Apply replacements in reverse order to maintain indices
+    replacements.reverse().forEach(repl => {
+      processedText = processedText.substring(0, repl.index) + 
+                      repl.replacement + 
+                      processedText.substring(repl.index + repl.length);
+    });
+    
+    return processedText;
+  });
+  
+  return processedParts.join('');
+}
+
+/**
  * Extract tags from markdown content
  * Handles Obsidian tags: #tag, #tag/subtag, #tag/subtag/subsubtag
  * Tags can appear at start of line, after whitespace, or standalone
@@ -1004,12 +1101,9 @@ function addPageMetadata(content, setInfo, filePath = null) {
       }
       const allTags = [...new Set([...existingTags, ...tags])].sort();
       
-      // Format tags as objects (key-value pairs where key and value are the same)
-      const tagsObj = {};
-      allTags.forEach(tag => {
-        tagsObj[tag] = tag;
-      });
-      frontmatterObj.tags = tagsObj;
+      // Format tags as YAML array for Anytype compatibility
+      // Anytype recognizes tags when formatted as an array
+      frontmatterObj.tags = allTags;
     }
     
     // Rebuild frontmatter
@@ -1034,20 +1128,19 @@ function addPageMetadata(content, setInfo, filePath = null) {
       ...(setInfo && setInfo.rootSet && { set: setInfo.rootSet })
     };
     if (tags.length > 0) {
-      // Format tags as objects (key-value pairs where key and value are the same)
-      const tagsObj = {};
-      tags.forEach(tag => {
-        tagsObj[tag] = tag;
-      });
-      frontmatter.tags = tagsObj;
+      // Format tags as YAML array for Anytype compatibility
+      frontmatter.tags = tags;
     }
     
     const frontmatterStr = '---\n' + 
       Object.entries(frontmatter)
         .map(([key, value]) => {
-          if (key === 'tags' && typeof value === 'object' && !Array.isArray(value)) {
-            // Format tags as YAML object
-            const tagEntries = Object.entries(value).map(([k, v]) => `  ${k}: "${v}"`).join('\n');
+          if (key === 'tags' && Array.isArray(value)) {
+            // Format tags as YAML array for Anytype
+            if (value.length === 0) {
+              return `${key}: []`;
+            }
+            const tagEntries = value.map(tag => `  - "${tag}"`).join('\n');
             return `${key}:\n${tagEntries}`;
           }
           return `${key}: ${typeof value === 'string' ? `"${value}"` : value}`;
@@ -1093,6 +1186,9 @@ function processMarkdownFile(filePath, setInfo, fileRelativeDir = '', fileRelati
   
   // Convert images/embeds - pass fileRelativePathInZip for correct path calculation
   processedContent = convertImages(processedContent, fileDir, fileRelativeDir, fileRelativePathInZip);
+  
+  // Highlight tags in content (make them bold for visibility)
+  processedContent = highlightTags(processedContent);
   
   // Add metadata: rootFolders for pages directly in root folders, SetLeaf for subfolders, Page for root files
   // setInfo will be null for root files, or the Set info for files in folders

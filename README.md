@@ -9,7 +9,8 @@ A Node.js script that converts Obsidian notes (with links and files) to a zip fi
 - ✅ **Creates a single root Set (`vault.set.md`)** with hierarchical folder structure
 - ✅ **Pages in folders use `type: SetLeaf`** with root Set metadata
 - ✅ **Root-level pages use `type: Page`** (no set metadata)
-- ✅ Extracts and formats Obsidian tags as YAML objects in frontmatter
+- ✅ Extracts and formats Obsidian tags as YAML arrays in frontmatter
+- ✅ Highlights tags in markdown content (makes them bold for visibility)
 - ✅ Preserves folder structure with sanitized paths (spaces → underscores)
 - ✅ Includes all attachments (images, PDFs, documents, audio, video, etc.)
 - ✅ Recursively searches for images in attachments folders and subfolders
@@ -88,13 +89,15 @@ npm run convert
    - All paths are sanitized (spaces → underscores) and use forward slashes
    - Supports images, PDFs, and other document types
 
-5. **Tag Extraction**:
+5. **Tag Extraction and Highlighting**:
    - Extracts Obsidian tags (e.g., `#tag`, `#tag/subtag`) from markdown content
    - Recognizes tags at start of line, after whitespace, or standalone (not embedded in words)
-   - Adds tags to frontmatter as YAML objects (key-value pairs where key and value are the same)
-   - Skips tags inside code blocks and inline code
+   - **Highlights tags in content**: Converts `#tag` to `**#tag**` (bold) for better visibility
+   - Adds tags to frontmatter as YAML arrays for Anytype compatibility
+   - Skips tags inside code blocks and inline code (both for extraction and highlighting)
    - Merges with existing tags if present
    - Debug logging shows which tags are found in each file
+   - Tags appear both in content (highlighted) and in frontmatter (as tag objects)
 
 6. **File Inclusion**:
    - Includes all markdown files (`.md`, `.markdown`)
@@ -163,7 +166,7 @@ You can then upload this zip file to Anytype, where root folders become Sets, su
   - Attachments folders (both relative to file and vault root)
   - Entire vault (as last resort)
 - **File Path Fixes**: Automatically removes incorrectly appended `.md` extensions from image and file paths (e.g., `image.png.md` → `image.png`)
-- **Tag Formatting**: Tags are extracted from markdown content using improved regex that recognizes tags in various contexts (start of line, after whitespace, standalone). Tags are added to frontmatter as YAML objects (not arrays). The script includes debug logging to show which tags are found in each file.
+- **Tag Formatting**: Tags are extracted from markdown content using improved regex that recognizes tags in various contexts (start of line, after whitespace, standalone). Tags are highlighted in the content by making them bold (`#tag` → `**#tag**`). Tags are added to frontmatter as YAML arrays for Anytype compatibility. The script includes debug logging to show which tags are found in each file. Tags appear both visually in the content (as bold text) and as tag objects in Anytype (from frontmatter).
 - **Link Paths**: All link paths use forward slashes and are relative to vault root
 - **Broken Links**: Broken links (to non-existent notes) are still converted but may not work in Anytype
 - **Obsidian Features**: Obsidian-specific features like frontmatter and plugins are preserved as-is in the markdown
