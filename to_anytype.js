@@ -882,15 +882,20 @@ function isDirectlyInRootFolder(filePath) {
 /**
  * Extract tags from markdown content
  * Handles Obsidian tags: #tag, #tag/subtag, #tag/subtag/subsubtag
+ * Tags can appear at start of line, after whitespace, or standalone
  * @param {string} content - Markdown content
  * @returns {Array<string>} Array of unique tags
  */
 function extractTags(content) {
   const tags = new Set();
   
-  // Match Obsidian tags: #tag or #tag/subtag (not in code blocks or inline code)
-  // This regex matches # followed by alphanumeric characters, underscores, hyphens, and slashes
-  const tagRegex = /(?:^|\s)#([a-zA-Z0-9_\-/]+)/g;
+  // Match Obsidian tags: #tag or #tag/subtag
+  // Tags must be:
+  // - At start of line, or after whitespace/punctuation (not part of a word)
+  // - Followed by whitespace, punctuation, or end of line (not part of a word)
+  // Tags can contain: alphanumeric, underscores, hyphens, and slashes
+  // This regex ensures tags are standalone, not embedded in words
+  const tagRegex = /(?:^|[\s\W])#([a-zA-Z0-9_\-/]+)(?=[\s\W]|$)/g;
   
   // Split content by code blocks to avoid matching tags in code
   const codeBlockRegex = /```[\s\S]*?```|`[^`]+`/g;
@@ -914,10 +919,16 @@ function extractTags(content) {
   
   // Extract tags from non-code parts
   let tagMatch;
+  // Reset regex lastIndex to ensure we search from the beginning
+  tagRegex.lastIndex = 0;
   while ((tagMatch = tagRegex.exec(textToSearch)) !== null) {
     const tag = tagMatch[1];
     if (tag && tag.length > 0) {
-      tags.add(tag);
+      // Normalize tag (trim and ensure it's valid)
+      const normalizedTag = tag.trim();
+      if (normalizedTag.length > 0) {
+        tags.add(normalizedTag);
+      }
     }
   }
   
@@ -933,6 +944,11 @@ function extractTags(content) {
 function addPageMetadata(content, setInfo, filePath = null) {
   // Extract tags from content
   const tags = extractTags(content);
+  
+  // Debug: log tags found (only for files with tags)
+  if (tags.length > 0 && filePath) {
+    console.log(`    🏷️  Tags found in ${path.basename(filePath)}: ${tags.join(', ')}`);
+  }
   
   // Check if frontmatter already exists
   const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
