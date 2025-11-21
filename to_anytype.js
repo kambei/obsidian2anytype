@@ -1115,7 +1115,8 @@ function addPageMetadata(content, setInfo, filePath = null) {
             if (value.length === 0) {
               return `${key}: []`;
             }
-            const tagEntries = value.map(tag => `  - "${tag}"`).join('\n');
+            // Format tags without quotes - Anytype may prefer this format for badge display
+            const tagEntries = value.map(tag => `  - ${tag}`).join('\n');
             return `${key}:\n${tagEntries}`;
           }
           return `${key}: ${typeof value === 'string' ? `"${value}"` : value}`;
@@ -1143,7 +1144,8 @@ function addPageMetadata(content, setInfo, filePath = null) {
             if (value.length === 0) {
               return `${key}: []`;
             }
-            const tagEntries = value.map(tag => `  - "${tag}"`).join('\n');
+            // Format tags without quotes - Anytype may prefer this format for badge display
+            const tagEntries = value.map(tag => `  - ${tag}`).join('\n');
             return `${key}:\n${tagEntries}`;
           }
           return `${key}: ${typeof value === 'string' ? `"${value}"` : value}`;
