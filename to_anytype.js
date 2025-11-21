@@ -1101,9 +1101,10 @@ function addPageMetadata(content, setInfo, filePath = null) {
       }
       const allTags = [...new Set([...existingTags, ...tags])].sort();
       
-      // Format tags as YAML array for Anytype compatibility
-      // Anytype recognizes tags when formatted as an array
-      frontmatterObj.tags = allTags;
+      // Format tags as objects for Anytype - tags need to be objects, not just strings
+      // Each tag should be an object with a name property
+      const tagsAsObjects = allTags.map(tag => ({ name: tag }));
+      frontmatterObj.tags = tagsAsObjects;
     }
     
     // Rebuild frontmatter
@@ -1111,12 +1112,24 @@ function addPageMetadata(content, setInfo, filePath = null) {
       Object.entries(frontmatterObj)
         .map(([key, value]) => {
           if (key === 'tags' && Array.isArray(value)) {
-            // Format tags as YAML array for Anytype (to display as badges)
+            // Format tags as YAML array of objects for Anytype (to display as badges)
             if (value.length === 0) {
               return `${key}: []`;
             }
-            // Format tags without quotes - Anytype may prefer this format for badge display
-            const tagEntries = value.map(tag => `  - ${tag}`).join('\n');
+            // Format tags as objects with name property for Anytype badge display
+            // Anytype automatically assigns colors to tags based on their names
+            const tagEntries = value.map(tag => {
+              if (typeof tag === 'object' && tag.name) {
+                // Tag is already an object with name property
+                return `  - name: "${tag.name}"`;
+              } else if (typeof tag === 'string') {
+                // Tag is a string, format as object with name property
+                return `  - name: "${tag}"`;
+              } else {
+                // Fallback: convert to string
+                return `  - name: "${String(tag)}"`;
+              }
+            }).join('\n');
             return `${key}:\n${tagEntries}`;
           }
           return `${key}: ${typeof value === 'string' ? `"${value}"` : value}`;
@@ -1132,20 +1145,34 @@ function addPageMetadata(content, setInfo, filePath = null) {
       ...(setInfo && setInfo.rootSet && { set: setInfo.rootSet })
     };
     if (tags.length > 0) {
-      // Format tags as YAML array for Anytype compatibility
-      frontmatter.tags = tags;
+      // Format tags as objects for Anytype - tags need to be objects, not just strings
+      // Each tag should be an object with a name property
+      const tagsAsObjects = tags.map(tag => ({ name: tag }));
+      frontmatter.tags = tagsAsObjects;
     }
     
     const frontmatterStr = '---\n' + 
       Object.entries(frontmatter)
         .map(([key, value]) => {
           if (key === 'tags' && Array.isArray(value)) {
-            // Format tags as YAML array for Anytype
+            // Format tags as YAML array of objects for Anytype badge display
             if (value.length === 0) {
               return `${key}: []`;
             }
-            // Format tags without quotes - Anytype may prefer this format for badge display
-            const tagEntries = value.map(tag => `  - ${tag}`).join('\n');
+            // Format tags as objects with name property for Anytype
+            // Anytype automatically assigns colors to tags based on their names
+            const tagEntries = value.map(tag => {
+              if (typeof tag === 'object' && tag.name) {
+                // Tag is already an object with name property
+                return `  - name: "${tag.name}"`;
+              } else if (typeof tag === 'string') {
+                // Tag is a string, format as object with name property
+                return `  - name: "${tag}"`;
+              } else {
+                // Fallback: convert to string
+                return `  - name: "${String(tag)}"`;
+              }
+            }).join('\n');
             return `${key}:\n${tagEntries}`;
           }
           return `${key}: ${typeof value === 'string' ? `"${value}"` : value}`;
