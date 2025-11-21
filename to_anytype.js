@@ -1101,9 +1101,13 @@ function addPageMetadata(content, setInfo, filePath = null) {
       }
       const allTags = [...new Set([...existingTags, ...tags])].sort();
       
-      // Format tags as objects for Anytype - tags need to be objects, not just strings
-      // Each tag should be an object with a name property
-      const tagsAsObjects = allTags.map(tag => ({ name: tag }));
+      // Format tags as objects for Anytype - tags need to be objects with id and name
+      // Each tag should be an object with id and name properties for Anytype to recognize them
+      const tagsAsObjects = allTags.map(tag => {
+        // Generate a simple ID from the tag name (consistent hash)
+        const tagId = tag.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        return { id: tagId, name: tag };
+      });
       frontmatterObj.tags = tagsAsObjects;
     }
     
@@ -1116,18 +1120,22 @@ function addPageMetadata(content, setInfo, filePath = null) {
             if (value.length === 0) {
               return `${key}: []`;
             }
-            // Format tags as objects with name property for Anytype badge display
+            // Format tags as objects with id and name properties for Anytype badge display
             // Anytype automatically assigns colors to tags based on their names
             const tagEntries = value.map(tag => {
               if (typeof tag === 'object' && tag.name) {
                 // Tag is already an object with name property
-                return `  - name: "${tag.name}"`;
+                const tagId = tag.id || tag.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                return `  - id: "${tagId}"\n    name: "${tag.name}"`;
               } else if (typeof tag === 'string') {
-                // Tag is a string, format as object with name property
-                return `  - name: "${tag}"`;
+                // Tag is a string, format as object with id and name properties
+                const tagId = tag.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                return `  - id: "${tagId}"\n    name: "${tag}"`;
               } else {
                 // Fallback: convert to string
-                return `  - name: "${String(tag)}"`;
+                const tagStr = String(tag);
+                const tagId = tagStr.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                return `  - id: "${tagId}"\n    name: "${tagStr}"`;
               }
             }).join('\n');
             return `${key}:\n${tagEntries}`;
@@ -1145,9 +1153,13 @@ function addPageMetadata(content, setInfo, filePath = null) {
       ...(setInfo && setInfo.rootSet && { set: setInfo.rootSet })
     };
     if (tags.length > 0) {
-      // Format tags as objects for Anytype - tags need to be objects, not just strings
-      // Each tag should be an object with a name property
-      const tagsAsObjects = tags.map(tag => ({ name: tag }));
+      // Format tags as objects for Anytype - tags need to be objects with id and name
+      // Each tag should be an object with id and name properties for Anytype to recognize them
+      const tagsAsObjects = tags.map(tag => {
+        // Generate a simple ID from the tag name (consistent hash)
+        const tagId = tag.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        return { id: tagId, name: tag };
+      });
       frontmatter.tags = tagsAsObjects;
     }
     
@@ -1159,18 +1171,22 @@ function addPageMetadata(content, setInfo, filePath = null) {
             if (value.length === 0) {
               return `${key}: []`;
             }
-            // Format tags as objects with name property for Anytype
+            // Format tags as objects with id and name properties for Anytype
             // Anytype automatically assigns colors to tags based on their names
             const tagEntries = value.map(tag => {
               if (typeof tag === 'object' && tag.name) {
                 // Tag is already an object with name property
-                return `  - name: "${tag.name}"`;
+                const tagId = tag.id || tag.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                return `  - id: "${tagId}"\n    name: "${tag.name}"`;
               } else if (typeof tag === 'string') {
-                // Tag is a string, format as object with name property
-                return `  - name: "${tag}"`;
+                // Tag is a string, format as object with id and name properties
+                const tagId = tag.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                return `  - id: "${tagId}"\n    name: "${tag}"`;
               } else {
                 // Fallback: convert to string
-                return `  - name: "${String(tag)}"`;
+                const tagStr = String(tag);
+                const tagId = tagStr.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                return `  - id: "${tagId}"\n    name: "${tagStr}"`;
               }
             }).join('\n');
             return `${key}:\n${tagEntries}`;
