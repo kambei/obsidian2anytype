@@ -185,3 +185,9 @@ You can then upload this zip file to Anytype, where root folders become Sets, su
 - **Root Set**: A single `vault.set.md` file contains the complete folder hierarchy with clickable links
 - **SetLeaves**: Reference the root Set they belong to (the root folder containing them), not intermediate subfolders
 
+## Support Me
+
+If you find this application helpful, consider supporting me on Ko-fi!
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/kambei)
+
